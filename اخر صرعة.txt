@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إصدار الشهادات الاحترافية - تصميم مطابق للصور</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        tajawal: ['Tajawal', 'sans-serif'],
+                        amiri: ['Amiri', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- html2canvas & jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+
+        /* Certificate Base Container */
+        #certificate-container {
+            width: 1123px; /* A4 Landscape width */
+            height: 794px; /* A4 Landscape height */
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out;
+            transform-origin: top center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+
+        /* Template Dynamic Background Overlays */
+        .tpl-geom-bg {
+            background-image: 
+                radial-gradient(circle at center, rgba(255,255,255,0.7) 0%, transparent 70%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 10px);
+        }
+        .tpl-comic-bg {
+            background-image: radial-gradient(rgba(255,255,255,0.4) 3px, transparent 3px);
+            background-size: 20px 20px;
+        }
+        .tpl-kids-bg {
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
+        }
+        .tpl-distance-bg {
+            background-image: radial-gradient(circle at 100% 100%, rgba(255,255,255,0.4) 0%, transparent 50%),
+                              radial-gradient(circle at 0% 0%, rgba(255,255,255,0.4) 0%, transparent 50%);
+        }
+
+        /* Spring Style Fixes */
+        .text-spring-name {
+            /* استخدام الظلال المتعددة لعمل إطار أبيض مثالي للخطوط العربية بدون تشويه */
+            text-shadow: 
+                -4px -4px 0 #fff, 4px -4px 0 #fff, -4px 4px 0 #fff, 4px 4px 0 #fff,
+                -4px 0 0 #fff, 4px 0 0 #fff, 0 -4px 0 #fff, 0 4px 0 #fff,
+                0 15px 25px rgba(0,0,0,0.2);
+            line-height: 1.4;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        /* Comic Style Specific Classes - FIXED ARABIC TEXT CLIPPING AND STROKE */
+        .text-comic-title {
+            /* Using multiple text-shadows to simulate stroke without breaking Arabic connections */
+            text-shadow: 
+                -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+                -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+                6px 6px 0 rgba(0,0,0,0.3), 9px 9px 0 rgba(0,0,0,0.1);
+            line-height: 1.6; /* Prevents vertical clipping of Arabic dots/shadows */
+        }
+        .text-comic-name {
+            text-shadow: 
+                -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+                -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+                5px 5px 0 rgba(0,0,0,0.2), 8px 8px 0 rgba(0,0,0,0.1);
+            line-height: 1.6;
+        }
+        .comic-box {
+            background-color: white;
+            border: 5px solid black;
+            box-shadow: 10px 10px 0px black;
+        }
+
+        /* Helper Classes */
+        .cert-inner-content {
+            position: relative;
+            z-index: 20;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Loader */
+        #loader { display: none; }
+        .loading #loader { display: flex; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Sidebar / Controls -->
+    <aside class="w-full md:w-[420px] lg:w-[450px] bg-white border-l border-gray-200 shadow-xl h-full flex flex-col z-30 shrink-0">
+        <div class="p-6 bg-[#0c4a6e] text-white flex items-center gap-3">
+            <i class="ph-fill ph-palette text-3xl text-sky-100"></i>
+            <div>
+                <h1 class="text-xl font-bold">مُصمم الشهادات</h1>
+                <p class="text-xs text-sky-100 opacity-80">تحكم كامل بالألوان والنصوص</p>
+            </div>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+            
+            <!-- Templates Selection -->
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-3">اختر تصميم الشهادة</label>
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="setTemplate('geom')" class="tpl-btn group relative border-2 border-transparent rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all ring-2 ring-sky-500 ring-offset-2 flex items-center p-3 gap-4" data-tpl="geom" style="background: linear-gradient(to right, #fdfbf5, #f4eee1);">
+                        <div class="w-12 h-12 rounded bg-[#2E593F] flex items-center justify-center border-2 border-[#C5A059] rotate-45 scale-75 shrink-0"></div>
+                        <div class="text-right">
+                            <div class="font-amiri text-[#BA1C1C] font-bold text-lg">هندسي فخم (صورة 1)</div>
+                            <div class="text-xs text-gray-600 font-tajawal">طابع رسمي ملكي</div>
+                        </div>
+                    </button>
+                    
+                    <button onclick="setTemplate('floral')" class="tpl-btn group relative border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-4 bg-[#F8F9F4]" data-tpl="floral">
+                        <i class="ph-fill ph-plant text-[#4E583B] text-4xl shrink-0"></i>
+                        <div class="text-right">
+                            <div class="font-amiri text-[#A88754] font-bold text-lg">نباتي أنيق (صورة 2)</div>
+                            <div class="text-xs text-gray-600 font-tajawal">لمسات طبيعية وورق زيتون</div>
+                        </div>
+                    </button>
+
+                    <button onclick="setTemplate('kids')" class="tpl-btn group relative border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-4 bg-[#FEF9C3]" data-tpl="kids">
+                        <div class="w-10 h-10 rounded-full bg-orange-400 shadow-lg border-2 border-white flex items-center justify-center text-white font-bold text-xs shrink-0 mx-1">👦👧</div>
+                        <div class="text-right">
+                            <div class="font-cairo text-[#7E22CE] font-bold text-lg">أطفال 3D (صورة 3)</div>
+                            <div class="text-xs text-gray-600 font-tajawal">مرح ومحايد (للأولاد والبنات)</div>
+                        </div>
+                    </button>
+
+                    <!-- New Distance Learning Template Button -->
+                    <button onclick="setTemplate('distance')" class="tpl-btn group relative border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-4 bg-[#eff6ff]" data-tpl="distance">
+                        <div class="w-12 h-12 rounded-lg bg-blue-500 shadow-[2px_2px_0_#1e3a8a] border-[2px] border-white flex items-center justify-center text-white text-[1.5rem] shrink-0">💻</div>
+                        <div class="text-right">
+                            <div class="font-cairo text-[#1e40af] font-black text-lg">تعلّم عن بُعد (جديد)</div>
+                            <div class="text-xs text-gray-800 font-tajawal">عصري، رقمي، بدون اسم المدير</div>
+                        </div>
+                    </button>
+
+                    <button onclick="setTemplate('comic')" class="tpl-btn group relative border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-4 bg-[#e0f2fe]" data-tpl="comic">
+                        <div class="w-12 h-12 rounded-lg bg-pink-500 shadow-[2px_2px_0_#000] border-[3px] border-black flex items-center justify-center text-white font-black text-[0.65rem] shrink-0 transform -rotate-12">BAM!</div>
+                        <div class="text-right">
+                            <div class="font-cairo text-black font-black text-lg">كوميكس وأنيمي</div>
+                            <div class="text-xs text-gray-800 font-tajawal">حماسي، طاقة خارقة للطلاب!</div>
+                        </div>
+                    </button>
+
+                    <button onclick="setTemplate('spring')" class="tpl-btn group relative border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex items-center p-3 gap-4 bg-[#f0fdf4]" data-tpl="spring">
+                        <div class="w-12 h-12 rounded-lg bg-[#fbcfe8] shadow-[2px_2px_0_#831843] border-[2px] border-white flex items-center justify-center text-white text-[1.5rem] shrink-0">🌸</div>
+                        <div class="text-right">
+                            <div class="font-cairo text-[#831843] font-black text-lg">ربيع وإجازة (صورة 4)</div>
+                            <div class="text-xs text-gray-800 font-tajawal">طبيعة، أزهار، ومخطوطة بردي</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Advanced Color Palette -->
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">تخصيص الألوان (شامل)</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-title" value="#BA1C1C" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">العنوان</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-name" value="#A68A56" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">الاسم</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-text" value="#333333" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">النص</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-bg" value="#FDFBF5" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">الخلفية</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-primary" value="#2E593F" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">أشكال 1 (أساسي)</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="color" id="color-secondary" value="#C5A059" class="w-full h-8 cursor-pointer border border-gray-300 rounded p-0" oninput="updatePreview()">
+                        <span class="text-[0.65rem] mt-1 text-gray-600 font-bold">أشكال 2 (ثانوي)</span>
+                    </div>
+                </div>
+                <div class="mt-2 text-right">
+                    <button onclick="resetColors()" class="text-xs text-sky-600 hover:text-sky-800 underline transition-colors">استعادة ألوان القالب الافتراضية</button>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Data Inputs -->
+            <div class="space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">صيغة الشهادة (تخصيص النصوص تلقائياً)</label>
+                    <div class="flex gap-2">
+                        <button onclick="setGender('girl')" id="btn-gender-girl" class="flex-1 py-2 rounded-lg border-2 border-pink-500 bg-pink-50 text-pink-700 font-bold transition-all shadow-sm">👧 أنثى (بنت)</button>
+                        <button onclick="setGender('boy')" id="btn-gender-boy" class="flex-1 py-2 rounded-lg border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold transition-all shadow-sm">👦 مذكر (ولد)</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم المدرسة</label>
+                    <input type="text" id="input-school" value="مدرسة ابن سينا الأبتدائية طمره" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all font-bold" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">أسماء الطلاب (كل اسم في سطر)</label>
+                    <textarea id="input-names" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all resize-none font-bold text-lg" placeholder="ساره عواد&#10;محمد حجازي..." oninput="updatePreview()">سندس حجازي</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">عنوان الشهادة</label>
+                    <input type="text" id="input-title" value="نَجْمَة التَّعَلُّم عَنْ بُعْد" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all font-bold text-lg" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">السبب (النص البارز)</label>
+                    <input type="text" id="input-reason" value="بكل فخر نمنح هذه الشهادة إلى:" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all font-bold" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الصفات (تظهر كشريط في قالب الربيع/عن بعد)</label>
+                    <input type="text" id="input-traits" value="🚀 التعلّم مغامرة ممتعة! 🌟" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all font-bold text-center text-pink-600" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">أيقونات / رسومات الزينة (افصل بينها بمسافة)</label>
+                    <input type="text" id="input-icons" value="⭐ 💻 📡 📚 😃 😉" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all text-center text-xl" placeholder="مثال: ⭐ 🌟 📚 💻" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">نص التهنئة</label>
+                    <textarea id="input-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all resize-none" oninput="updatePreview()">شكراً لمشاركتكِ الرائعة وتألقكِ في التعلّم عن بُعد خلال هذا الشهر
+لقد أظهرتِ اجتهاداً، مشاركة مميزة، وروحاً إيجابية رائعة 💫
+⭐ كنتِ مصدر إلهام داخل الصف ⭐
+استمري في التألق... فأنتِ نجمة حقيقية تضيء طريق التعلّم ⭐</textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-sm font-bold text-gray-700">المدير/ة</label>
+                            <select id="select-director-title" class="text-xs bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-600 outline-none focus:border-sky-500" onchange="updatePreview()">
+                                <option value="مدير المدرسة">مدير المدرسة</option>
+                                <option value="مديرة المدرسة">مديرة المدرسة</option>
+                                <option value="المدير">المدير</option>
+                                <option value="المديرة">المديرة</option>
+                                <option value="القائد">القائد</option>
+                                <option value="القائدة">القائدة</option>
+                            </select>
+                        </div>
+                        <input type="text" id="input-director" value="" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all" placeholder="يظهر في القوالب الداعمة" oninput="updatePreview()">
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-sm font-bold text-gray-700">المعلم/ة</label>
+                            <select id="select-teacher-title" class="text-xs bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-600 outline-none focus:border-sky-500" onchange="updatePreview()">
+                                <option value="مربية الصف">مربية الصف</option>
+                                <option value="مربي الصف">مربي الصف</option>
+                                <option value="المعلمة">المعلمة</option>
+                                <option value="المعلم">المعلم</option>
+                                <option value="المدربة">المدربة</option>
+                                <option value="المدرب">المدرب</option>
+                            </select>
+                        </div>
+                        <input type="text" id="input-teacher" value="المعلمة امنه عكاشه" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all" oninput="updatePreview()">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">التاريخ</label>
+                    <input type="text" id="input-date" value="آذار 2026" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all text-center font-bold" oninput="updatePreview()">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">شعار المدرسة</label>
+                    <div class="flex flex-col gap-2">
+                        <input type="text" id="input-logo-url" placeholder="أو ضع رابط صورة الشعار هنا (http://...)" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none transition-all text-left dir-ltr" oninput="handleLogoUrl()">
+                        
+                        <div class="flex items-center gap-3">
+                            <label class="flex-1 cursor-pointer bg-gray-50 hover:bg-gray-100 border border-dashed border-gray-300 text-gray-600 text-sm py-2 px-4 rounded-lg text-center transition-colors">
+                                <i class="ph ph-upload-simple ml-1"></i> رفع صورة الشعار
+                                <input type="file" id="input-logo" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
+                            </label>
+                            <button onclick="clearLogo()" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200" title="حذف الشعار">
+                                <i class="ph ph-trash text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-6 bg-gray-50 border-t border-gray-200 space-y-3">
+            <button onclick="downloadPNG()" class="w-full bg-white text-[#0c4a6e] border-2 border-[#0c4a6e] hover:bg-sky-50 font-bold py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                <i class="ph-bold ph-image text-xl"></i>
+                تحميل كصورة (PNG)
+            </button>
+            <button onclick="downloadPDF()" class="w-full bg-[#0ea5e9] text-white hover:bg-[#0284c7] font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                <i class="ph-bold ph-file-pdf text-xl"></i>
+                <span id="pdf-btn-text">تصدير للطباعة (PDF)</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Preview Area -->
+    <main class="flex-1 bg-slate-200 relative overflow-hidden flex flex-col" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px;">
+        <div class="h-14 bg-white/90 backdrop-blur border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10 shrink-0">
+            <div class="font-semibold text-gray-700 flex items-center gap-2">
+                <i class="ph-fill ph-monitor text-sky-500"></i> المعاينة الدقيقة (جاهز للطباعة)
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <div class="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                    <button onclick="zoomPreview(0.1)" class="hover:text-sky-600"><i class="ph-bold ph-magnifying-glass-plus"></i></button>
+                    <span id="zoom-level" class="w-10 text-center font-mono">100%</span>
+                    <button onclick="zoomPreview(-0.1)" class="hover:text-sky-600"><i class="ph-bold ph-magnifying-glass-minus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-auto flex items-center justify-center p-8 custom-scrollbar" id="preview-scroll-area">
+            <div id="scale-wrapper" class="transition-transform duration-200 origin-center bg-transparent">
+                <!-- The Actual Certificate Element -->
+                <div id="certificate-container" class="tpl-geom-bg">
+                    <div id="cert-content" class="w-full h-full">
+                        <!-- Content injected via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loader" class="absolute inset-0 bg-white/90 backdrop-blur-md z-50 flex-col items-center justify-center text-sky-600 hidden">
+            <i class="ph-bold ph-aperture animate-spin text-6xl mb-4"></i>
+            <p class="font-bold text-xl" id="loader-text">جاري استخراج الملف...</p>
+        </div>
+    </main>
+
+    <script>
+        let currentTemplate = 'distance'; // Set default to distance
+        let currentGender = 'girl';
+        let uploadedLogo = null;
+        let scale = 1; 
+
+        // قواميس الألوان المدمجة لـ 6 عناصر
+        const templateColors = {
+            geom:     { title: '#BA1C1C', name: '#A68A56', text: '#333333', bg: '#FDFBF5', primary: '#2E593F', secondary: '#C5A059' },
+            floral:   { title: '#A88754', name: '#8C7343', text: '#5C624E', bg: '#F8F9F4', primary: '#4E583B', secondary: '#6B7554' },
+            kids:     { title: '#7E22CE', name: '#1E293B', text: '#374151', bg: '#FEF3C7', primary: '#F59E0B', secondary: '#10B981' },
+            distance: { title: '#1e40af', name: '#d97706', text: '#1e293b', bg: '#e0f2fe', primary: '#3b82f6', secondary: '#f59e0b' },
+            comic:    { title: '#ffffff', name: '#fde047', text: '#1f2937', bg: '#7dd3fc', primary: '#ec4899', secondary: '#fde047' },
+            spring:   { title: '#ffffff', name: '#4a1516', text: '#5c3a21', bg: '#a9dfbf', primary: '#d3b683', secondary: '#831843' }
+        };
+
+        function resetColors() {
+            const tpl = currentTemplate;
+            document.getElementById('color-title').value = templateColors[tpl].title;
+            document.getElementById('color-name').value = templateColors[tpl].name;
+            document.getElementById('color-text').value = templateColors[tpl].text;
+            document.getElementById('color-bg').value = templateColors[tpl].bg;
+            document.getElementById('color-primary').value = templateColors[tpl].primary;
+            document.getElementById('color-secondary').value = templateColors[tpl].secondary;
+            updatePreview();
+        }
+
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-6 py-3 rounded-lg shadow-lg text-white font-bold text-sm transition-opacity duration-300 ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function calculateInitialZoom() {
+            const scrollArea = document.getElementById('preview-scroll-area');
+            const containerWidth = 1123;
+            const containerHeight = 794;
+            const availableWidth = scrollArea.clientWidth - 64; 
+            const availableHeight = scrollArea.clientHeight - 64;
+            scale = Math.min(availableWidth / containerWidth, availableHeight / containerHeight, 1);
+            applyZoom();
+        }
+
+        function zoomPreview(delta) {
+            scale += delta;
+            if (scale < 0.2) scale = 0.2;
+            if (scale > 2) scale = 2;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            document.getElementById('scale-wrapper').style.transform = `scale(${scale})`;
+            document.getElementById('zoom-level').innerText = Math.round(scale * 100) + '%';
+        }
+
+        function setGender(gender) {
+            currentGender = gender;
+            const btnGirl = document.getElementById('btn-gender-girl');
+            const btnBoy = document.getElementById('btn-gender-boy');
+            
+            if (gender === 'girl') {
+                btnGirl.className = "flex-1 py-2 rounded-lg border-2 border-pink-500 bg-pink-50 text-pink-700 font-bold transition-all shadow-sm";
+                btnBoy.className = "flex-1 py-2 rounded-lg border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold transition-all shadow-sm";
+            } else {
+                btnBoy.className = "flex-1 py-2 rounded-lg border-2 border-sky-500 bg-sky-50 text-sky-700 font-bold transition-all shadow-sm";
+                btnGirl.className = "flex-1 py-2 rounded-lg border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold transition-all shadow-sm";
+            }
+            updateDefaults();
+        }
+
+        function updateDefaults() {
+            const tpl = currentTemplate;
+            if(tpl === 'kids') {
+                document.getElementById('input-school').value = ""; 
+                document.getElementById('input-title').value = "شهادة شكر وتقدير";
+                document.getElementById('input-reason').value = currentGender === 'girl' 
+                    ? "نحتفل اليوم بجهودكِ الرائعة وابتسامتكِ التي تملأ صفنا بهجة! 🎈"
+                    : "نحتفل اليوم بجهودكَ الرائعة وابتسامتكَ التي تملأ صفنا بهجة! 🎈";
+                document.getElementById('input-text').value = currentGender === 'girl'
+                    ? "لقد أثبتِّ أن التعلم رحلة ممتعة، وكنتِ فيها بطلةً حقيقيةً تتخطى التحديات بذكاء. شكراً لإبداعكِ الذي يجعل كل يوم دراسي أجمل! 🌟\nاستمري في التألق والتحليق عالياً نحو أحلامكِ، فنحن فخورون بكِ جداً! 🚀🎨"
+                    : "لقد أثبتَّ أن التعلم رحلة ممتعة، وكنتَ فيها بطلاً حقيقياً يتخطى التحديات بذكاء. شكراً لإبداعكَ الذي يجعل كل يوم دراسي أجمل! 🌟\nاستمر في التألق والتحليق عالياً نحو أحلامكَ، فنحن فخورون بكَ جداً! 🚀🎨";
+                document.getElementById('input-teacher').value = "المعلمة امنه عكاشه";
+                document.getElementById('input-director').value = "الأستاذ محمد حجازي";
+                if(document.getElementById('input-icons')) document.getElementById('input-icons').value = "🎈 🌟 ✨ 🎨 🏆";
+            } else if (tpl === 'distance') {
+                document.getElementById('input-school').value = "ابن سينا طمره";
+                document.getElementById('input-title').value = currentGender === 'girl' ? "نَجْمَة التَّعَلُّم عَنْ بُعْد" : "نَجْم التَّعَلُّم عَنْ بُعْد";
+                document.getElementById('input-reason').value = "بكل فخر نمنح هذه الشهادة إلى:";
+                if(document.getElementById('input-traits')) {
+                    document.getElementById('input-traits').value = "🚀 التعلّم مغامرة ممتعة! 🌟";
+                }
+                document.getElementById('input-text').value = currentGender === 'girl'
+                    ? "شكراً لمشاركتكِ الرائعة وتألقكِ في التعلّم عن بُعد خلال هذا الشهر\nلقد أظهرتِ اجتهاداً، مشاركة مميزة، وروحاً إيجابية رائعة 💫\n⭐ كنتِ مصدر إلهام داخل الصف ⭐\nاستمري في التألق... فأنتِ نجمة حقيقية تضيء طريق التعلّم ⭐"
+                    : "شكراً لمشاركتكَ الرائعة وتألقكَ في التعلّم عن بُعد خلال هذا الشهر\nلقد أظهرتَ اجتهاداً، مشاركة مميزة، وروحاً إيجابية رائعة 💫\n⭐ كنتَ مصدر إلهام داخل الصف ⭐\nاستمر في التألق... فأنتَ نجم حقيقي يضيء طريق التعلّم ⭐";
+                document.getElementById('input-teacher').value = "المعلمة امنه عكاشه";
+                document.getElementById('input-director').value = ""; // No director
+                if(document.getElementById('input-icons')) document.getElementById('input-icons').value = "⭐ 💻 📡 📚 😃 😉 🎮";
+            } else if (tpl === 'comic') {
+                document.getElementById('input-school').value = "أكاديمية الأبطال";
+                document.getElementById('input-title').value = "شهادة بطل خارق!";
+                document.getElementById('input-reason').value = currentGender === 'girl'
+                    ? "⚡ تم منح طاقة الأنيمي الأسطورية للبطلة: ⚡"
+                    : "⚡ تم منح طاقة الأنيمي الأسطورية للبطل: ⚡";
+                document.getElementById('input-text').value = currentGender === 'girl'
+                    ? "مستواكِ الخيالي وتفاعلكِ الأسطوري جعل منكِ بطلةً لا تُقهر في صفنا! استمري في إطلاق طاقتكِ الإبداعية ولا تتوقفي أبداً! 🦸‍♀️💥"
+                    : "مستواك الخيالي وتفاعلك الأسطوري جعل منك بطلاً لا يُقهر في صفنا! استمر في إطلاق طاقتك الإبداعية ولا تتوقف أبداً! 🦸‍♂️💥";
+                document.getElementById('input-teacher').value = "الكابتن: امنه عكاشه";
+                document.getElementById('input-director').value = "القائد: محمد حجازي";
+                if(document.getElementById('input-icons')) document.getElementById('input-icons').value = "💥 ⭐ ⚡ 🦸‍♂️ 🦸‍♀️";
+            } else if (tpl === 'spring') {
+                document.getElementById('input-school').value = ""; 
+                document.getElementById('input-title').value = "عُطْلَةُ رَبِيعٍ سَعِيدَةٍ";
+                document.getElementById('input-reason').value = currentGender === 'girl'
+                    ? "بكل فخر ومحبة، نهدي هذه الشهادة الربيعية لـ:"
+                    : "بكل فخر ومحبة، نهدي هذه الشهادة الربيعية لـ:"; 
+                if(document.getElementById('input-traits')) {
+                    document.getElementById('input-traits').value = currentGender === 'girl'
+                        ? "🌟 ذكية 🌸 مبدعة 🌸 متألقة 🌟"
+                        : "🌟 ذكي 🌸 مبدع 🌸 متألق 🌟";
+                }
+                document.getElementById('input-text').value = currentGender === 'girl'
+                    ? "تتفتح أزهار الربيع خجلاً أمام إبداعكِ وتألقكِ! 🌸 لقد كنتِ نجمةً مضيئةً طوال الفصل، تنثرين عبير الذكاء والمرح في كل زاوية.\nأتمنى لكِ إجازةً ربيعيةً تملؤها السعادة، الضحكات، والألوان الزاهية! 🦋✨"
+                    : "تتفتح أزهار الربيع ترحيباً بإبداعكَ وتألقكَ! 🌸 لقد كنتَ نجماً مضيئاً طوال الفصل، تنثر طاقة الذكاء والمرح في كل زاوية.\nأتمنى لكَ إجازةً ربيعيةً تملؤها السعادة، الضحكات، والألوان الزاهية! 🦋✨";
+                document.getElementById('input-teacher').value = "من معلمتك المحبة ";
+                document.getElementById('input-director').value = ""; 
+                if(document.getElementById('input-icons')) document.getElementById('input-icons').value = "🌸 🌿 🦋 🌷 ✨";
+            } else if(tpl === 'geom' || tpl === 'floral') {
+                document.getElementById('input-school').value = tpl === 'geom' ? "مدرسة ابن سينا" : "مدرسة ابن سينا طمره";
+                document.getElementById('input-title').value = "شَهَادَةُ شُكر وَتَقدِير";
+                document.getElementById('input-reason').value = currentGender === 'girl'
+                    ? "تتقدم إدارة المدرسة بكل فخر واعتزاز بمنح هذه الشهادة للطالبة المتميزة:"
+                    : "تتقدم إدارة المدرسة بكل فخر واعتزاز بمنح هذه الشهادة للطالب المتميز:";
+                document.getElementById('input-text').value = currentGender === 'girl'
+                    ? "شكراً لمشاركاتكِ المميزة وتفاعلكِ الإيجابي في الحصص، مما يعكس حرصكِ على التعلم والتقدم."
+                    : "شكراً لمشاركاتكَ المميزة وتفاعلكَ الإيجابي في الحصص، مما يعكس حرصكَ على التعلم والتقدم.";
+                document.getElementById('input-teacher').value = "المعلمة امنه عكاشه";
+                document.getElementById('input-director').value = "الأستاذ محمد حجازي";
+                if(document.getElementById('input-icons')) document.getElementById('input-icons').value = tpl === 'floral' ? "🌿 📖 🎓" : "";
+            }
+
+            updatePreview();
+        }
+
+        function setTemplate(tpl) {
+            currentTemplate = tpl;
+            document.querySelectorAll('.tpl-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-sky-500', 'ring-offset-2', 'border-transparent');
+                btn.classList.add('border-gray-200');
+            });
+            const activeBtn = document.querySelector(`.tpl-btn[data-tpl="${tpl}"]`);
+            activeBtn.classList.remove('border-gray-200');
+            activeBtn.classList.add('ring-2', 'ring-sky-500', 'ring-offset-2', 'border-transparent');
+
+            // تحديث الألوان لتناسب القالب الجديد
+            document.getElementById('color-title').value = templateColors[tpl].title;
+            document.getElementById('color-name').value = templateColors[tpl].name;
+            document.getElementById('color-text').value = templateColors[tpl].text;
+            document.getElementById('color-bg').value = templateColors[tpl].bg;
+            document.getElementById('color-primary').value = templateColors[tpl].primary;
+            document.getElementById('color-secondary').value = templateColors[tpl].secondary;
+
+            // تغيير النصوص الافتراضية بناءً على التصميم الجديد والجنس المحدد مسبقاً
+            updateDefaults();
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedLogo = e.target.result;
+                    document.getElementById('input-logo-url').value = '';
+                    updatePreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleLogoUrl() {
+            const url = document.getElementById('input-logo-url').value.trim();
+            if (url) {
+                uploadedLogo = url;
+                document.getElementById('input-logo').value = '';
+                updatePreview();
+            } else {
+                if(!document.getElementById('input-logo').value) {
+                    clearLogo();
+                }
+            }
+        }
+
+        function clearLogo() {
+            uploadedLogo = null;
+            document.getElementById('input-logo').value = '';
+            document.getElementById('input-logo-url').value = '';
+            updatePreview();
+        }
+
+        function updatePreview(overrideName = null) {
+            const rawNames = document.getElementById('input-names').value;
+            const nameArray = rawNames.split('\n').map(n => n.trim()).filter(n => n !== '');
+            const schoolName = document.getElementById('input-school').value;
+            const title = document.getElementById('input-title').value;
+            const reason = document.getElementById('input-reason').value;
+            const traits = document.getElementById('input-traits') ? document.getElementById('input-traits').value : '';
+            const text = document.getElementById('input-text').value;
+            const teacher = document.getElementById('input-teacher').value;
+            const director = document.getElementById('input-director').value;
+            const teacherTitle = document.getElementById('select-teacher-title') ? document.getElementById('select-teacher-title').value : 'مربية الصف';
+            const directorTitle = document.getElementById('select-director-title') ? document.getElementById('select-director-title').value : 'مدير المدرسة';
+            const dateStr = document.getElementById('input-date').value;
+            
+            // قراءة الأيقونات المخصصة وتجهيزها
+            const iconsInput = document.getElementById('input-icons') ? document.getElementById('input-icons').value.trim() : '';
+            const iconsList = iconsInput ? iconsInput.split(/[\s]+/).filter(i => i) : ['⭐', '🌟', '✨'];
+            const getIcon = (i) => iconsList[i % iconsList.length] || '';
+
+            // قراءة الألوان المخصصة الستة
+            const colorTitle = document.getElementById('color-title').value;
+            const colorName = document.getElementById('color-name').value;
+            const colorText = document.getElementById('color-text').value;
+            const colorBg = document.getElementById('color-bg').value;
+            const colorPrimary = document.getElementById('color-primary').value;
+            const colorSecondary = document.getElementById('color-secondary').value;
+
+            // تحديث لون وفئة الخلفية للحاوية
+            const container = document.getElementById('certificate-container');
+            container.className = `tpl-${currentTemplate}-bg`;
+            container.style.backgroundColor = colorBg;
+
+            let displayName = overrideName || (nameArray.length > 0 ? nameArray[0] : 'اسم الطالب هنا');
+            
+            const pdfBtnText = document.getElementById('pdf-btn-text');
+            if (nameArray.length > 1 && !overrideName) {
+                pdfBtnText.innerText = `إصدار ${nameArray.length} شهادات (PDF)`;
+            } else {
+                pdfBtnText.innerText = 'تصدير للطباعة (PDF)';
+            }
+
+            const contentDiv = document.getElementById('cert-content');
+            let html = '';
+
+            const logoImg = uploadedLogo 
+                ? `<img src="${uploadedLogo}" crossorigin="anonymous" class="h-20 w-auto max-w-[120px] object-contain drop-shadow-md border-2 border-white rounded-full" onerror="this.src='https://placehold.co/120x120?text=Error'">` 
+                : ``;
+
+            if (currentTemplate === 'geom') {
+                html = `
+                    <div class="absolute top-[18px] left-[18px] right-[18px] bottom-[18px] border-[3px] pointer-events-none z-[5]" style="border-color: ${colorSecondary};">
+                        <div class="absolute top-[6px] left-[6px] right-[6px] bottom-[6px] border opacity-30" style="border-color: ${colorPrimary};"></div>
+                    </div>
+                    
+                    <div class="absolute w-[180px] h-[180px] transform rotate-45 -top-[50px] -right-[50px] z-0 shadow-lg" style="background: linear-gradient(135deg, ${colorSecondary}ee, ${colorSecondary}, ${colorSecondary}aa);"></div>
+                    <div class="absolute w-[120px] h-[120px] transform rotate-45 top-[20px] -right-[20px] z-0 shadow-lg" style="background: linear-gradient(135deg, ${colorPrimary}cc, ${colorPrimary}, ${colorPrimary}99);"></div>
+                    <div class="absolute w-[100px] h-[100px] border-[6px] transform rotate-45 top-[100px] right-[10px] z-0 shadow-inner" style="border-color: ${colorSecondary}; background: rgba(255,255,255,0.1);"></div>
+                    
+                    <div class="absolute w-[160px] h-[160px] transform rotate-45 -bottom-[60px] -left-[60px] z-0 shadow-lg" style="background: linear-gradient(135deg, ${colorPrimary}cc, ${colorPrimary}, ${colorPrimary}99);"></div>
+                    <div class="absolute w-[100px] h-[100px] transform rotate-45 bottom-[10px] -left-[20px] z-0 shadow-lg" style="background: linear-gradient(135deg, ${colorSecondary}ee, ${colorSecondary}, ${colorSecondary}aa);"></div>
+                    <div class="absolute w-[60px] h-[60px] border-[4px] transform rotate-45 bottom-[70px] left-[20px] z-0 shadow-inner" style="border-color: ${colorSecondary}; background: rgba(255,255,255,0.1);"></div>
+
+                    <div class="cert-inner-content pt-10 pb-16 px-24 font-tajawal">
+                        <div class="flex flex-col items-center justify-center min-h-[90px] z-20 w-full shrink-0">
+                            ${uploadedLogo ? `<div class="mb-2 z-20">${logoImg}</div>` : ''}
+                            ${schoolName ? `<div class="font-black text-3xl mb-1 z-20 drop-shadow-sm" style="color: ${colorPrimary};">${schoolName}</div>` : ''}
+                        </div>
+                        
+                        <div class="-mx-24 w-[1123px] relative flex flex-col items-center justify-center mt-3 mb-6 z-10 shrink-0">
+                            <div class="w-full h-[2px]" style="background: linear-gradient(to right, ${colorSecondary}, #ffffff, ${colorSecondary});"></div>
+                            <div class="w-full h-[40px]" style="background: linear-gradient(90deg, ${colorPrimary}ee, ${colorPrimary}, ${colorPrimary}ee); box-shadow: 0 4px 15px rgba(0,0,0,0.15);"></div>
+                            <div class="w-full h-[5px] shadow-md" style="background: linear-gradient(to right, ${colorSecondary}, #ffffff, ${colorSecondary});"></div>
+                            
+                            <div class="absolute w-12 h-12 rotate-45 border-[3px] z-10 flex items-center justify-center shadow-sm" style="background-color: ${colorBg}; border-color: ${colorSecondary};">
+                                <div class="w-4 h-4" style="background-color: ${colorPrimary};"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="font-amiri text-[5.2rem] font-bold mb-4 z-20 leading-normal shrink-0" style="color: ${colorTitle}; text-shadow: 2px 2px 0px #fff, 4px 4px 8px rgba(0,0,0,0.15);">${title}</div>
+                        
+                        <div class="text-[1.3rem] font-bold mb-4 z-20 px-12 py-2 border-b-2 border-dashed shrink-0" style="color: ${colorText}; border-color: ${colorSecondary};">${reason}</div>
+                        
+                        <div class="text-[4.5rem] font-black mb-4 z-20 leading-none shrink-0" style="color: ${colorName}; text-shadow: 2px 2px 0px #fff, 4px 4px 5px rgba(0,0,0,0.15);">${displayName}</div>
+                        
+                        <div class="text-[1.5rem] font-bold text-center max-w-3xl leading-relaxed z-20 shrink-0" style="color: ${colorText};">${text.replace(/\n/g, '<br>')}</div>
+                        
+                        <div class="w-full flex justify-between items-end px-12 z-20 mt-auto shrink-0">
+                            <div class="text-center relative w-[280px] bg-white/60 backdrop-blur-sm p-4 rounded-xl border border-white/50 shadow-sm" style="color: ${colorPrimary};">
+                                <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-32 h-[2px]" style="background-color: ${colorSecondary};"></div>
+                                <div class="text-lg font-bold mb-1">${directorTitle}</div>
+                                <div class="text-[1.7rem] font-amiri font-black mt-2 leading-tight">${director}</div>
+                            </div>
+                            
+                            <div class="relative flex items-center justify-center w-[130px] h-[130px] transform translate-y-2">
+                                <div class="absolute inset-0 shadow-[0_10px_20px_rgba(0,0,0,0.25)]" style="background: linear-gradient(135deg, ${colorSecondary}, #ffffff, ${colorSecondary}); clip-path: polygon(50% 0%, 61% 11%, 76% 9%, 83% 23%, 98% 28%, 97% 43%, 100% 58%, 90% 69%, 87% 84%, 73% 90%, 63% 100%, 48% 97%, 34% 100%, 22% 89%, 9% 82%, 11% 67%, 0% 55%, 5% 40%, 0% 25%, 14% 17%, 21% 4%, 36% 8%);"></div>
+                                <div class="absolute inset-[6px] rounded-full border-2 flex flex-col items-center justify-center text-center shadow-inner" style="background: linear-gradient(135deg, ${colorPrimary}, ${colorPrimary}dd); border-color: ${colorBg};">
+                                    <span class="text-[0.8rem] font-bold opacity-80 mb-1" style="color: ${colorBg};">اعتمدت</span>
+                                    <span class="text-[1.1rem] font-black text-white whitespace-nowrap">${dateStr}</span>
+                                </div>
+                            </div>
+
+                            <div class="text-center relative w-[280px] bg-white/60 backdrop-blur-sm p-4 rounded-xl border border-white/50 shadow-sm" style="color: ${colorPrimary};">
+                                <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-32 h-[2px]" style="background-color: ${colorSecondary};"></div>
+                                <div class="text-lg font-bold mb-1">${teacherTitle}</div>
+                                <div class="text-[1.7rem] font-amiri font-black mt-2 leading-tight">${teacher}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (currentTemplate === 'floral') {
+                const svgTopRight = `<svg class="absolute top-[-30px] right-[-30px] w-[300px] z-0" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path d="M200 0 v80 C150 80 120 50 100 0 Z" fill="${colorPrimary}" opacity="0.9"/><circle cx="160" cy="30" r="15" fill="${colorSecondary}"/><path d="M200 80 C180 120 120 120 100 100 C120 80 180 60 200 80 Z" fill="${colorSecondary}" opacity="0.8"/></svg>`;
+                const svgBottomLeft = `<svg class="absolute bottom-[-20px] left-[-20px] w-[350px] z-0" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><path d="M0 300 h150 C150 200 80 150 0 100 Z" fill="${colorSecondary}" opacity="0.8"/><circle cx="50" cy="220" r="20" fill="${colorBg}" stroke="${colorSecondary}" stroke-width="4"/><circle cx="90" cy="260" r="15" fill="${colorBg}" stroke="${colorSecondary}" stroke-width="3"/><path d="M0 100 C50 150 120 150 150 200 C100 250 50 250 0 300 Z" fill="${colorPrimary}" opacity="0.5"/></svg>`;
+                
+                html = `
+                    ${svgTopRight}
+                    ${svgBottomLeft}
+                    
+                    <div class="cert-inner-content pt-16 pb-16 px-24 font-tajawal">
+                        ${uploadedLogo ? `<div class="mb-4 z-10 shrink-0">${logoImg}</div>` : ''}
+                        ${schoolName ? `<div class="font-bold text-2xl mb-4 font-amiri z-10 shrink-0" style="color: ${colorPrimary};">${schoolName}</div>` : ''}
+                        
+                        <div class="font-amiri text-[5.5rem] font-bold mb-4 z-10 drop-shadow-sm leading-normal shrink-0" style="color: ${colorTitle};">${title}</div>
+                        <div class="text-[1.4rem] font-bold mb-6 z-10 shrink-0" style="color: ${colorPrimary};">${reason}</div>
+                        
+                        <div class="text-[4.5rem] font-black mb-6 z-10 leading-none shrink-0" style="color: ${colorName};">${displayName}</div>
+                        
+                        <div class="text-[1.5rem] font-bold text-center max-w-3xl leading-relaxed z-10 shrink-0" style="color: ${colorText};">${text.replace(/\n/g, '<br>')}</div>
+                        
+                        <div class="w-full mt-auto flex flex-col items-center shrink-0">
+                            <div class="text-2xl font-bold mb-6 z-10 shrink-0" style="color: ${colorSecondary};">${dateStr}</div>
+                            
+                            <div class="w-full flex justify-between items-center px-12 z-20 shrink-0">
+                                <div class="text-center bg-white/70 backdrop-blur-sm px-8 py-3 rounded-2xl shadow-sm border border-white/50" style="color: ${colorPrimary};">
+                                    <div class="text-xl font-bold mb-1">${directorTitle}</div>
+                                    <div class="text-2xl font-black">${director}</div>
+                                </div>
+                                <div class="text-5xl filter drop-shadow-md opacity-90 pb-2">${getIcon(0)} ${getIcon(1)} ${getIcon(2)}</div>
+                                <div class="text-center bg-white/70 backdrop-blur-sm px-8 py-3 rounded-2xl shadow-sm border border-white/50" style="color: ${colorPrimary};">
+                                    <div class="text-xl font-bold mb-1">${teacherTitle}</div>
+                                    <div class="text-2xl font-black">${teacher}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            else if (currentTemplate === 'distance') {
+                html = `
+                    <div class="absolute inset-0 border-[16px] z-0" style="border-color: ${colorPrimary}; background-color: #f0f9ff;"></div>
+                    <div class="absolute inset-[16px] border-[6px] border-dashed z-0" style="border-color: #f59e0b;"></div>
+
+                    <!-- Decorative Icons & Comic Words -->
+                    <div class="absolute top-6 left-6 text-[3.5rem] font-black transform -rotate-12 z-10" style="color: #fde047; -webkit-text-stroke: 2px #000; text-shadow: 4px 4px 0 #000;">WOW!</div>
+                    <div class="absolute top-28 left-6 text-[2.2rem] font-black transform -rotate-12 z-10" style="color: #ef4444; -webkit-text-stroke: 1.5px #000; text-shadow: 3px 3px 0 #000;">GREAT!</div>
+                    <div class="absolute top-6 right-6 text-[3rem] font-black transform rotate-12 z-10" style="color: #3b82f6; -webkit-text-stroke: 1.5px #000; text-shadow: 3px 3px 0 #000;">FANTASTIC!</div>
+                    <div class="absolute bottom-8 right-6 text-[3rem] font-black transform -rotate-12 z-10 leading-none text-center" style="color: #22c55e; -webkit-text-stroke: 1.5px #000; text-shadow: 3px 3px 0 #000;">LEVEL<br>UP!</div>
+                    <div class="absolute bottom-6 left-6 text-[3.5rem] font-black transform rotate-12 z-10" style="color: #ef4444; -webkit-text-stroke: 2px #000; text-shadow: 4px 4px 0 #000;">WOW!</div>
+                    
+                    <!-- Scatter Emojis - MOVED AWAY FROM CENTER -->
+                    <div class="absolute top-8 left-[25%] text-4xl z-10">${getIcon(0)}</div>
+                    <div class="absolute top-6 left-[40%] text-5xl z-10">${getIcon(1)}</div>
+                    <div class="absolute top-6 right-[40%] text-5xl z-10">${getIcon(2)}</div>
+                    <div class="absolute top-8 right-[25%] text-5xl z-10">${getIcon(3)}</div>
+                    <div class="absolute top-10 left-[15%] text-4xl z-10">${getIcon(4)}</div>
+                    <div class="absolute top-10 right-[15%] text-4xl z-10">${getIcon(5)}</div>
+                    
+                    <!-- Bottom Emojis Pushed to corners to leave center completely clean -->
+                    <div class="absolute bottom-16 left-[18%] text-5xl z-10 transform -rotate-12 opacity-90">${getIcon(6)}</div>
+                    <div class="absolute bottom-10 left-[8%] text-5xl z-10 transform rotate-12 opacity-90">${getIcon(7)}</div>
+                    <div class="absolute top-[35%] right-6 text-6xl z-10 opacity-80 transform -rotate-12">${getIcon(8)}</div>
+                    <div class="absolute bottom-[25%] right-8 text-6xl z-10 opacity-80 transform rotate-12">${getIcon(9)}</div>
+
+                    ${uploadedLogo ? `<div class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded-full shadow-md border-[3px] z-30" style="border-color: ${colorSecondary};">${logoImg}</div>` : ''}
+
+                    <div class="cert-inner-content flex flex-col w-full h-full z-20 relative pt-10 pb-12">
+                        
+                        <!-- Title -->
+                        <div class="w-full text-center mt-8 z-20 shrink-0">
+                            <h1 class="text-[3.6rem] font-black inline-block px-8 py-1" style="color: ${colorPrimary}; text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 4px 4px 0 rgba(0,0,0,0.15);">
+                                ⭐ ${title} ⭐
+                            </h1>
+                        </div>
+
+                        <!-- 2 Columns Layout (No Avatar) -->
+                        <div class="flex-1 w-full flex flex-row items-center justify-center gap-12 px-16 z-20 mt-4 mb-2">
+                            
+                            <!-- Center/Left: Text Content -->
+                            <div class="w-[65%] flex flex-col items-center text-center px-4">
+                                <p class="text-[1.6rem] font-bold mb-2" style="color: ${colorText};">${reason}</p>
+                                <h2 class="text-[3.8rem] font-black leading-tight mb-3" style="color: ${colorText};">
+                                    ${displayName}
+                                </h2>
+                                ${schoolName ? `<p class="font-bold text-[1.6rem] mb-4" style="color: ${colorText};">من مدرسة: ${schoolName}</p>` : ''}
+                                
+                                <p class="text-[1.4rem] font-bold leading-relaxed px-2 mt-1" style="color: ${colorText};">
+                                    ${text.replace(/\n/g, '<br>')}
+                                </p>
+                            </div>
+                            
+                            <!-- Right: Super Student & Badge -->
+                            <div class="w-[30%] flex flex-col items-center justify-center h-full pb-4 gap-8 relative">
+                                <!-- Super Student -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-3xl text-yellow-400 tracking-widest drop-shadow-md mb-2" style="-webkit-text-stroke: 1px #ca8a04;">⭐⭐⭐⭐⭐</div>
+                                    <div class="text-xl font-black text-black">Super Student</div>
+                                </div>
+                                
+                                <!-- Badge -->
+                                <div class="relative flex flex-col items-center mt-2">
+                                    <div class="w-40 h-40 rounded-full border-[8px] border-yellow-400 shadow-xl flex items-center justify-center flex-col z-20" style="background-color: ${colorPrimary};">
+                                        <div class="text-white text-[2.2rem] font-black text-center leading-tight drop-shadow-md" style="text-shadow: 2px 2px 0px rgba(0,0,0,0.3);">نجم<br>التعلّم</div>
+                                    </div>
+                                    <div class="absolute top-[8rem] -left-6 w-14 h-24 transform rotate-[35deg] -z-10 shadow-lg" style="background-color: ${colorPrimary}; filter: brightness(0.85); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);"></div>
+                                    <div class="absolute top-[8rem] -right-6 w-14 h-24 transform -rotate-[35deg] -z-10 shadow-lg" style="background-color: ${colorPrimary}; filter: brightness(0.85); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);"></div>
+                                    
+                                    <div class="absolute top-[13rem] z-30 px-8 py-1.5 rounded-sm border border-yellow-600 shadow-md whitespace-nowrap transform -rotate-3" style="background: linear-gradient(to bottom, #fde047, #eab308); box-shadow: inset 0 2px 5px rgba(255,255,255,0.5), 0 4px 6px rgba(0,0,0,0.2);">
+                                        <span class="text-[1.4rem] font-black text-black text-shadow-sm">نجم التعلم</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Elements -->
+                        <div class="w-full flex flex-col items-center mt-auto shrink-0 relative z-30">
+                            <!-- Traits Banner -->
+                            <div class="px-8 py-1.5 rounded-full border-4 border-white shadow-md font-black text-[1.4rem] flex items-center justify-center mb-4" style="background-color: ${colorPrimary}; color: white;">
+                                ${traits}
+                            </div>
+                            
+                            <!-- Teacher Only -->
+                            <div class="flex flex-col items-center justify-center opacity-90 pb-2">
+                                <span class="text-[1.1rem] font-bold leading-tight mb-1" style="color: ${colorText};">${teacherTitle}</span>
+                                <span class="text-[1.6rem] font-black leading-tight" style="color: ${colorText};">${teacher}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            else if (currentTemplate === 'kids') {
+                let heroLabel = currentGender === 'girl' ? 'إلى البطلة المتميزة' : 'إلى البطل المتميز';
+                html = `
+                    <div class="absolute top-[50px] left-[200px] w-[20px] h-[20px] rounded-full shadow-md z-0" style="background-color: ${colorPrimary};"></div>
+                    <div class="absolute bottom-[80px] right-[150px] w-[30px] h-[30px] rounded-full shadow-md z-0" style="background-color: ${colorSecondary};"></div>
+                    <div class="absolute top-[100px] right-[250px] w-[15px] h-[15px] rounded-full shadow-sm z-0" style="background-color: ${colorPrimary}; filter: brightness(0.8);"></div>
+                    <div class="absolute top-[150px] left-[50px] text-5xl filter drop-shadow-lg opacity-80 z-0">${getIcon(0)}</div>
+                    <div class="absolute bottom-[180px] left-[50px] text-6xl filter drop-shadow-lg opacity-80 z-0">${getIcon(1)}</div>
+                    <div class="absolute top-[100px] right-[80px] text-5xl filter drop-shadow-lg opacity-80 z-0">${getIcon(2)}</div>
+                    <div class="absolute right-[50px] top-[50%] text-6xl filter drop-shadow-lg z-0">${getIcon(3)}</div>
+                    <div class="absolute left-[30px] bottom-[300px] text-7xl filter drop-shadow-lg z-0">${getIcon(4)}</div>
+
+                    <div class="cert-inner-content pt-12 pb-12 px-24 font-cairo">
+                        ${uploadedLogo ? `<div class="mb-4 z-10 shrink-0">${logoImg}</div>` : ''}
+                        ${schoolName ? `<div class="font-bold text-xl mb-4 z-10 shrink-0" style="color: ${colorPrimary};">${schoolName}</div>` : ''}
+                        
+                        <div class="text-6xl font-black mb-6 drop-shadow-sm mt-2 leading-normal shrink-0" style="color: ${colorTitle};">${title}</div>
+                        
+                        <div class="bg-white rounded-[2rem] py-6 px-24 shadow-lg mb-6 border border-gray-50 flex flex-col items-center z-10 shrink-0">
+                            <div class="text-gray-500 text-xl font-bold mb-2">${heroLabel}</div>
+                            <div class="text-5xl font-black leading-tight" style="color: ${colorName};">${displayName}</div>
+                        </div>
+
+                        <div class="bg-[#FFF7ED] rounded-2xl py-4 px-10 border text-[1.4rem] font-bold mb-6 shadow-sm text-center z-10 shrink-0" style="color: ${colorPrimary}; border-color: ${colorPrimary}44;">
+                            ${reason}
+                        </div>
+                        
+                        <div class="text-[1.4rem] font-bold text-center max-w-3xl leading-relaxed mb-auto z-10 shrink-0" style="color: ${colorText};">
+                            ${text.replace(/\n/g, '<br>')}
+                        </div>
+                        
+                        <div class="w-full flex justify-center items-end mt-8 relative h-[120px] z-10 shrink-0">
+                            <div class="bg-white rounded-t-3xl px-24 py-6 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] text-center relative z-20 border-t border-gray-100">
+                                <div class="text-gray-500 text-lg font-bold">مع خالص حبي وفخري،</div>
+                                <div class="text-[#0F172A] text-[2rem] font-black mt-2">${teacher}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTemplate === 'comic') {
+                const starburst = `
+                <svg class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[1100px] h-[1100px] opacity-20 z-0" viewBox="0 0 100 100">
+                    <path d="M50,0 L55,40 L100,10 L65,48 L100,70 L58,55 L70,100 L48,60 L10,100 L40,55 L0,60 L42,48 L0,20 L45,40 Z" fill="#ffffff"/>
+                </svg>`;
+
+                html = `
+                    ${starburst}
+
+                    <div class="cert-inner-content pt-8 pb-12 px-16 font-cairo z-10 flex flex-col h-full justify-between">
+                        
+                        <div class="flex flex-col items-center w-full shrink-0">
+                            <div class="absolute top-10 left-14 text-black font-black text-3xl px-6 py-4 rounded-full border-[4px] border-black transform -rotate-12 shadow-[5px_5px_0px_#000] z-20" style="background-color: ${colorSecondary};">
+                                سووووبر!! 💥
+                            </div>
+
+                            <!-- School / Logo -->
+                            <div class="flex flex-col items-center mb-4 transform -rotate-1">
+                                ${uploadedLogo ? `<div class="mb-2">${logoImg}</div>` : ''}
+                                ${schoolName ? `<div class="bg-black text-white px-6 py-2 font-bold text-lg border-2 border-white shadow-[3px_3px_0_#ef4444] rounded-md leading-normal">${schoolName}</div>` : ''}
+                            </div>
+                            
+                            <div class="text-[5.5rem] font-black mb-2 transform -rotate-2 text-comic-title leading-normal text-center pb-2" style="color: ${colorTitle};">
+                                ${title}
+                            </div>
+                        </div>
+
+                        <div class="comic-box rounded-xl px-6 py-6 mb-4 w-[90%] flex flex-col items-center transform rotate-1 relative shrink-0">
+                            <div class="absolute -top-4 -right-4 w-8 h-8 rounded-full border-[3px] border-black" style="background-color: ${colorPrimary};"></div>
+                            <div class="text-black text-[1.5rem] font-black mb-2">${reason}</div>
+                            <div class="text-[4.5rem] font-black leading-normal text-comic-name text-center w-full pb-2" style="color: ${colorName};">
+                                ${displayName}
+                            </div>
+                        </div>
+
+                        <div class="bg-white border-[4px] border-black shadow-[5px_5px_0px_#000] rounded-3xl px-8 py-5 mb-6 w-[85%] text-center relative transform -rotate-1 shrink-0">
+                            <div class="absolute -top-[14px] left-1/2 w-8 h-8 bg-white border-t-[4px] border-l-[4px] border-black transform -rotate-45"></div>
+                            <div class="text-2xl font-bold leading-normal" style="color: ${colorText};">${text.replace(/\n/g, '<br>')}</div>
+                        </div>
+
+                        <div class="w-full flex justify-between items-end px-6 shrink-0 mt-auto">
+                            <div class="bg-white border-[4px] border-black shadow-[5px_5px_0px_#000] px-6 py-3 rounded-lg transform -rotate-2">
+                                <div class="font-black text-gray-500 mb-0 text-sm">${directorTitle}</div>
+                                <div class="font-black text-2xl text-black">${director}</div>
+                            </div>
+
+                            <div class="bg-black border-[4px] border-black text-white font-black text-3xl px-8 py-3 transform rotate-2" style="box-shadow: 5px 5px 0px ${colorSecondary};">
+                                ${dateStr}
+                            </div>
+
+                            <div class="bg-white border-[4px] border-black shadow-[5px_5px_0px_#000] px-6 py-3 rounded-lg transform rotate-2">
+                                <div class="font-black text-gray-500 mb-0 text-sm">${teacherTitle}</div>
+                                <div class="font-black text-2xl text-black">${teacher}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTemplate === 'spring') {
+                html = `
+                    <div class="absolute top-[0px] left-[0px] w-full h-full z-0 opacity-40" style="background: linear-gradient(to bottom, transparent, #ffffff, transparent);"></div>
+
+                    <div class="absolute -top-10 -left-10 text-[130px] transform rotate-45 opacity-90 drop-shadow-md z-0">${getIcon(0)}</div>
+                    <div class="absolute top-10 left-24 text-[60px] transform -rotate-12 opacity-80 drop-shadow-md z-0">${getIcon(1)}</div>
+                    <div class="absolute top-32 left-10 text-[50px] transform -rotate-12 opacity-80 drop-shadow-md z-0">${getIcon(2)}</div>
+
+                    <div class="absolute -top-10 -right-10 text-[140px] transform -rotate-12 opacity-90 drop-shadow-md z-0">${getIcon(3)}</div>
+                    <div class="absolute top-24 right-28 text-[50px] transform rotate-12 opacity-80 drop-shadow-md z-0">${getIcon(4)}</div>
+
+                    <div class="absolute -bottom-10 -left-10 text-[150px] transform rotate-12 opacity-90 drop-shadow-md z-0">${getIcon(5)}</div>
+                    <div class="absolute bottom-24 left-24 text-[60px] opacity-80 drop-shadow-md z-0">${getIcon(6)}</div>
+
+                    <div class="absolute -bottom-10 -right-10 text-[160px] transform -rotate-12 opacity-90 drop-shadow-md z-0">${getIcon(7)}</div>
+                    <div class="absolute bottom-28 right-24 text-[50px] transform -rotate-12 opacity-80 drop-shadow-md z-0">${getIcon(8)}</div>
+                    <div class="absolute bottom-10 right-40 text-[60px] opacity-80 drop-shadow-md z-0">${getIcon(9)}</div>
+
+                    <div class="cert-inner-content pt-10 pb-12 px-16 font-cairo z-10 flex flex-col items-center justify-between h-full relative">
+                        
+                        <div class="flex flex-col items-center w-full shrink-0">
+                            ${schoolName ? `<div class="font-bold text-lg mb-2 bg-white/60 px-6 py-1 rounded-full shadow-sm backdrop-blur-sm z-10" style="color: ${colorSecondary};">${schoolName}</div>` : ''}
+                            
+                            <div class="text-[3.6rem] font-amiri font-black mb-3 z-10 leading-tight" style="color: ${colorTitle}; text-shadow: 2px 2px 0px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.2);">
+                                ${title}
+                            </div>
+                            
+                            <div class="text-[1.3rem] font-bold mb-2 z-10 px-6 py-1.5 rounded-full bg-white/60 shadow-sm" style="color: ${colorSecondary};">${reason}</div>
+                            
+                            <div class="text-spring-name text-[4.5rem] font-black mt-2 mb-2 text-center z-30 relative w-full" style="color: ${colorName};">
+                                ${displayName}
+                            </div>
+                        </div>
+
+                        <div class="border rounded-xl px-14 py-6 w-[80%] flex flex-col items-center relative shadow-[0_20px_40px_rgba(0,0,0,0.1)] shrink-0 z-20 mt-4 mb-4" style="background: linear-gradient(to bottom, #FFFDF8, #FDF6E3); border-color: ${colorPrimary}66;">
+                            
+                            <div class="absolute -top-3 left-4 right-4 h-6 rounded-full shadow-[0_5px_10px_rgba(0,0,0,0.1)] border" style="background: linear-gradient(to bottom, #fff, ${colorPrimary}44); border-color: ${colorPrimary}88;"></div>
+                            <div class="absolute -top-4 left-2 w-8 h-8 rounded-full shadow-md border-2 border-white" style="background-color: ${colorPrimary};"></div>
+                            <div class="absolute -top-4 right-2 w-8 h-8 rounded-full shadow-md border-2 border-white" style="background-color: ${colorPrimary};"></div>
+
+                            <div class="absolute -bottom-3 left-4 right-4 h-6 rounded-full shadow-[0_5px_10px_rgba(0,0,0,0.1)] border" style="background: linear-gradient(to bottom, #fff, ${colorPrimary}44); border-color: ${colorPrimary}88;"></div>
+                            <div class="absolute -bottom-4 left-2 w-8 h-8 rounded-full shadow-md border-2 border-white" style="background-color: ${colorPrimary};"></div>
+                            <div class="absolute -bottom-4 right-2 w-8 h-8 rounded-full shadow-md border-2 border-white" style="background-color: ${colorPrimary};"></div>
+                            
+                            ${uploadedLogo ? `<div class="absolute -top-14 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded-full shadow-md border-[3px] z-30" style="border-color: ${colorPrimary};">${logoImg}</div>` : ''}
+
+                            <div class="text-[1.5rem] font-bold text-center leading-relaxed font-tajawal w-full mt-5" style="color: ${colorText};">
+                                ${text.replace(/\n/g, '<br>')}
+                            </div>
+                            
+                            <div class="w-full flex justify-center mt-5">
+                                <div class="text-[1.4rem] font-black font-amiri bg-white/70 px-6 py-1 rounded-full border" style="color: ${colorSecondary}; border-color: ${colorSecondary}44;">
+                                    ${teacher}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="relative mt-auto z-30 shrink-0">
+                            <div class="absolute top-4 -left-12 w-16 h-12 rounded-l-full transform -rotate-12 -z-10 shadow-inner" style="background-color: ${colorPrimary};"></div>
+                            <div class="absolute top-4 -right-12 w-16 h-12 rounded-r-full transform rotate-12 -z-10 shadow-inner" style="background-color: ${colorPrimary};"></div>
+
+                            <div class="px-16 py-3 rounded-full border-[2px] shadow-[0_15px_25px_rgba(0,0,0,0.15)] font-black text-[2rem] text-center font-amiri" style="background: linear-gradient(to bottom, #fdf6e3, #f3dfc1); border-color: ${colorPrimary}; color: ${colorSecondary};">
+                                ${traits}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            contentDiv.innerHTML = html;
+        }
+
+        async function generateCanvasForExport() {
+            const scrollArea = document.getElementById('preview-scroll-area');
+            const scaleWrapper = document.getElementById('scale-wrapper');
+            const element = document.getElementById('certificate-container');
+            
+            const originalTransform = scaleWrapper.style.transform;
+            const originalScrollTop = scrollArea.scrollTop;
+            const originalScrollLeft = scrollArea.scrollLeft;
+            
+            scaleWrapper.style.transform = 'scale(1)';
+            scrollArea.scrollTop = 0;
+            scrollArea.scrollLeft = 0;
+            
+            await new Promise(r => setTimeout(r, 400)); 
+            
+            // قراءة لون الخلفية الحالي عند التصدير
+            let exportBg = document.getElementById('color-bg').value;
+
+            const canvas = await html2canvas(element, {
+                scale: 2, 
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: exportBg,
+                width: 1123,
+                height: 794
+            });
+            
+            scaleWrapper.style.transform = originalTransform;
+            scrollArea.scrollTop = originalScrollTop;
+            scrollArea.scrollLeft = originalScrollLeft;
+            
+            return canvas;
+        }
+
+        async function downloadPNG() {
+            const rawNames = document.getElementById('input-names').value;
+            const names = rawNames.split('\n').map(n => n.trim()).filter(n => n !== '');
+            if(names.length > 1) {
+                showToast("تحميل الصورة (PNG) يدعم طالباً واحداً فقط. لتحميل قائمة الطلاب، يرجى استخدام (PDF).", "error");
+                return;
+            }
+
+            showLoader('جاري تجهيز الصورة بجودة عالية...');
+            
+            try {
+                updatePreview();
+                const canvas = await generateCanvasForExport();
+                
+                const link = document.createElement('a');
+                link.download = `شهادة_${names.length > 0 ? names[0] : 'فارغة'}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+            } catch (error) {
+                console.error("Error generating PNG:", error);
+                showToast("حدث خطأ أثناء إنشاء الصورة.", "error");
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function downloadPDF() {
+            const rawNames = document.getElementById('input-names').value;
+            const names = rawNames.split('\n').map(n => n.trim()).filter(n => n !== '');
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const processNames = names.length > 0 ? names : [null];
+
+            showLoader(processNames.length > 1 ? `جاري إصدار ${processNames.length} شهادات...` : 'جاري تجهيز ملف PDF...');
+
+            try {
+                for (let i = 0; i < processNames.length; i++) {
+                    updatePreview(processNames[i]);
+                    const canvas = await generateCanvasForExport();
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98); 
+
+                    if (i > 0) pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
+                }
+
+                pdf.save(processNames.length > 1 ? 'الشهادات_المجمعة.pdf' : `شهادة_${processNames[0] || 'فارغة'}.pdf`);
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                showToast("حدث خطأ أثناء إنشاء ملف PDF.", "error");
+            } finally {
+                updatePreview();
+                hideLoader();
+            }
+        }
+
+        function showLoader(text) {
+            document.getElementById('loader-text').innerText = text;
+            document.getElementById('loader').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        window.onload = () => {
+            calculateInitialZoom();
+            resetColors(); 
+        };
+    </script>
+</body>
+</html>
